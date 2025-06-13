@@ -1,0 +1,1296 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>src: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">k8s-compare/src/auth.go (7.7%)</option>
+				
+				<option value="file1">k8s-compare/src/fetcher.go (0.0%)</option>
+				
+				<option value="file2">k8s-compare/src/html_template.go (100.0%)</option>
+				
+				<option value="file3">k8s-compare/src/kubernetes.go (0.0%)</option>
+				
+				<option value="file4">k8s-compare/src/main.go (0.0%)</option>
+				
+				<option value="file5">k8s-compare/src/output.go (75.9%)</option>
+				
+				<option value="file6">k8s-compare/src/setup.go (17.3%)</option>
+				
+				<option value="file7">k8s-compare/src/utils.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "fmt"
+        "os"
+        "os/exec"
+        "strings"
+
+        "github.com/charmbracelet/huh"
+)
+
+// isGoogleCloudContext checks if a context is a Google Cloud context
+func isGoogleCloudContext(contextName string) bool <span class="cov8" title="1">{
+        return strings.Contains(contextName, "connectgateway") ||
+                strings.Contains(contextName, "gke_") ||
+                strings.Contains(contextName, "google")
+}</span>
+
+// checkGCloudAuth verifies if gcloud authentication is active
+func checkGCloudAuth() error <span class="cov0" title="0">{
+        cmd := exec.Command("gcloud", "auth", "list", "--filter=status:ACTIVE", "--format=value(account)")
+        output, err := cmd.Output()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("gcloud command failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if strings.TrimSpace(string(output)) == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("no active gcloud authentication found")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// promptGCloudLogin prompts user to authenticate with Google Cloud
+func promptGCloudLogin() error <span class="cov0" title="0">{
+        fmt.Println("\n⚠️  Google Cloud authentication required!")
+        fmt.Println("🔐 Your gcloud credentials have expired or are not set up.")
+        fmt.Println("📍 This is required to access Google Kubernetes Engine (GKE) clusters.")
+
+        var confirm bool
+
+        form := huh.NewForm(
+                huh.NewGroup(
+                        huh.NewConfirm().
+                                Title("Run 'gcloud auth login' now?").
+                                Affirmative("Yes").
+                                Negative("No").
+                                Value(&amp;confirm),
+                ),
+        )
+
+        err := form.Run()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">if !confirm </span><span class="cov0" title="0">{
+                return fmt.Errorf("gcloud authentication is required to continue")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("\n🚀 Opening browser for Google Cloud authentication...")
+        fmt.Println("📱 Please complete the authentication process in your browser.")
+
+        cmd := exec.Command("gcloud", "auth", "login")
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+        cmd.Stdin = os.Stdin
+
+        if err := cmd.Run(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("gcloud auth login failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("\n✅ Authentication completed!")
+
+        // Verify authentication worked
+        if err := checkGCloudAuth(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("authentication verification failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// ensureGCloudAuth ensures Google Cloud authentication is active for the given context
+func ensureGCloudAuth(contextName string) error <span class="cov8" title="1">{
+        if !isGoogleCloudContext(contextName) </span><span class="cov8" title="1">{
+                return nil // Not a Google Cloud context, no auth needed
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("🔍 Checking Google Cloud authentication for context: %s\n", contextName)
+
+        if err := checkGCloudAuth(); err != nil </span><span class="cov0" title="0">{
+                fmt.Printf("⚠️  Authentication issue detected: %v\n", err)
+                if err := promptGCloudLogin(); err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        } else<span class="cov0" title="0"> {
+                fmt.Println("✅ Google Cloud authentication is active")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "fmt"
+)
+
+// fetchResources fetches resources from both clusters
+func fetchResources(config *ComparisonConfig) error <span class="cov0" title="0">{
+        fmt.Println("\n📊 Step 4: Fetching resources...")
+
+        var err error
+
+        fmt.Printf("🔍 Fetching resources from Cluster A (%s)...\n", config.ClusterA.Context)
+        config.ClusterA.Data, err = fetchClusterResourcesWithContext(config.ClusterA.Context, config.ClusterA.Namespaces, config.ClusterA.Resources)
+        if err != nil </span><span class="cov0" title="0">{
+                if isGoogleCloudContext(config.ClusterA.Context) </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to fetch from Cluster A - this may be due to authentication or network issues with Google Cloud: %w", err)
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("failed to fetch resources from Cluster A: %w", err)</span>
+        }
+        <span class="cov0" title="0">fmt.Printf("✅ Cluster A: Found %d resources\n", len(config.ClusterA.Data))
+
+        fmt.Printf("🔍 Fetching resources from Cluster B (%s)...\n", config.ClusterB.Context)
+        config.ClusterB.Data, err = fetchClusterResourcesWithContext(config.ClusterB.Context, config.ClusterB.Namespaces, config.ClusterB.Resources)
+        if err != nil </span><span class="cov0" title="0">{
+                if isGoogleCloudContext(config.ClusterB.Context) </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to fetch from Cluster B - this may be due to authentication or network issues with Google Cloud: %w", err)
+                }</span>
+                <span class="cov0" title="0">return fmt.Errorf("failed to fetch resources from Cluster B: %w", err)</span>
+        }
+        <span class="cov0" title="0">fmt.Printf("✅ Cluster B: Found %d resources\n", len(config.ClusterB.Data))
+
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package main
+
+import (
+        "fmt"
+        "strings"
+)
+
+// generateHTMLTemplate creates the complete HTML template with embedded data
+func generateHTMLTemplate(config *ComparisonConfig, clusterAJSON, clusterBJSON, timestamp string) string <span class="cov8" title="1">{
+        // Build the HTML template with proper escaping
+        template := `&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Kubernetes Resource Comparison Report - ` + timestamp + `&lt;/title&gt;
+    &lt;style&gt;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header h1 { color: #2c3e50; font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { color: #7f8c8d; font-size: 1.1rem; }
+        .metadata-section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .metadata-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .metadata-card { background: #f8f9fa; border-radius: 8px; padding: 20px; border-left: 4px solid #3498db; }
+        .metadata-card h3 { color: #2c3e50; margin-bottom: 15px; font-size: 1.2rem; }
+        .metadata-item { margin-bottom: 10px; }
+        .metadata-label { font-weight: 600; color: #34495e; margin-bottom: 5px; }
+        .metadata-value { color: #7f8c8d; background: white; padding: 8px 12px; border-radius: 4px; font-family: 'Monaco', 'Consolas', monospace; font-size: 0.9rem; }
+        .resource-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .resource-tag { background: #3498db; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .tabs { display: flex; background: white; border-radius: 12px 12px 0 0; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .tab { flex: 1; padding: 15px 20px; background: #ecf0f1; border: none; cursor: pointer; font-weight: 600; color: #7f8c8d; transition: all 0.3s ease; }
+        .tab:hover { background: #d5dbdb; }
+        .tab.active { background: #3498db; color: white; }
+        .tab-content { background: white; border-radius: 0 0 12px 12px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
+        .tab-content.active { display: block; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #f8f9fa; border-radius: 8px; padding: 20px; text-align: center; border-left: 4px solid #3498db; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #2c3e50; display: block; }
+        .stat-label { color: #7f8c8d; margin-top: 5px; }
+        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .resource-list { background: #f8f9fa; border-radius: 8px; padding: 20px; }
+        .resource-list h3 { color: #2c3e50; margin-bottom: 15px; font-size: 1.2rem; }
+        .resource-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #ecf0f1; }
+        .resource-item:last-child { border-bottom: none; }
+        .resource-name { font-weight: 500; color: #2c3e50; }
+        .resource-count { background: #3498db; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+        .resource-diff { background: #f8f9fa; border-radius: 8px; margin-bottom: 20px; overflow: hidden; border: 1px solid #ecf0f1; }
+        .resource-diff.expanded .resource-content { display: block; }
+        .resource-header { background: #ecf0f1; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s ease; }
+        .resource-header:hover { background: #d5dbdb; }
+        .resource-content { display: none; padding: 20px; }
+        .individual-resource { background: white; border-radius: 6px; margin-bottom: 15px; overflow: hidden; border: 1px solid #e0e6ed; }
+        .individual-resource.expanded .individual-content { display: block; }
+        .individual-header { background: #f8f9fa; padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; }
+        .individual-header:hover { background: #e9ecef; }
+        .individual-content { display: none; padding: 15px; }
+        .resource-metadata { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+        .status-different { background: #fff3cd; color: #856404; }
+        .status-only-a { background: #f8d7da; color: #721c24; }
+        .status-only-b { background: #d1ecf1; color: #0c5460; }
+        .diff-row { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 15px; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px; }
+        .diff-field { font-weight: 600; color: #2c3e50; align-self: start; }
+        .diff-value { padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 400px; overflow-y: auto; }
+        .diff-value.different { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .diff-value.missing { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .diff-value.added { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+        .json-key { color: #0066cc; font-weight: 600; }
+        .json-string { color: #008000; }
+        .json-number { color: #ff6600; }
+        .json-boolean { color: #cc0000; font-weight: 600; }
+        .json-null { color: #999999; font-style: italic; }
+        .json-object, .json-array { color: #333; }
+        .loading { text-align: center; padding: 40px; color: #7f8c8d; font-size: 1.1rem; }
+        .toggle-icon { transition: transform 0.3s ease; }
+        .expanded .toggle-icon { transform: rotate(90deg); }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class="container"&gt;
+        &lt;div class="header"&gt;
+            &lt;h1&gt;🔍 Kubernetes Resource Comparison Report&lt;/h1&gt;
+            &lt;p&gt;Automated comparison between ` + config.ClusterA.Context + ` and ` + config.ClusterB.Context + `&lt;/p&gt;
+            &lt;p style="margin-top: 10px; font-size: 1rem;"&gt;Generated on ` + timestamp + `&lt;/p&gt;
+        &lt;/div&gt;
+        
+        &lt;div class="metadata-section"&gt;
+            &lt;h2 style="color: #2c3e50; margin-bottom: 20px;"&gt;📊 Comparison Metadata&lt;/h2&gt;
+            &lt;div class="metadata-grid"&gt;
+                &lt;div class="metadata-card"&gt;
+                    &lt;h3&gt;🅰️ Cluster A&lt;/h3&gt;
+                    &lt;div class="metadata-item"&gt;
+                        &lt;div class="metadata-label"&gt;Context&lt;/div&gt;
+                        &lt;div class="metadata-value"&gt;` + config.ClusterA.Context + `&lt;/div&gt;
+                    &lt;/div&gt;
+                    &lt;div class="metadata-item"&gt;
+                        &lt;div class="metadata-label"&gt;Namespaces&lt;/div&gt;
+                        &lt;div class="metadata-value"&gt;` + strings.Join(config.ClusterA.Namespaces, ", ") + `&lt;/div&gt;
+                    &lt;/div&gt;
+                    &lt;div class="metadata-item"&gt;
+                        &lt;div class="metadata-label"&gt;Resource Count&lt;/div&gt;
+                        &lt;div class="metadata-value"&gt;` + fmt.Sprintf("%d", len(config.ClusterA.Data)) + ` resources&lt;/div&gt;
+                    &lt;/div&gt;
+                    &lt;div class="resource-tags"&gt;
+                        ` + generateResourceTags(config.ClusterA.Resources) + `
+                    &lt;/div&gt;
+                &lt;/div&gt;
+                
+                &lt;div class="metadata-card"&gt;
+                    &lt;h3&gt;🅱️ Cluster B&lt;/h3&gt;
+                    &lt;div class="metadata-item"&gt;
+                        &lt;div class="metadata-label"&gt;Context&lt;/div&gt;
+                        &lt;div class="metadata-value"&gt;` + config.ClusterB.Context + `&lt;/div&gt;
+                    &lt;/div&gt;
+                    &lt;div class="metadata-item"&gt;
+                        &lt;div class="metadata-label"&gt;Namespaces&lt;/div&gt;
+                        &lt;div class="metadata-value"&gt;` + strings.Join(config.ClusterB.Namespaces, ", ") + `&lt;/div&gt;
+                    &lt;/div&gt;
+                    &lt;div class="metadata-item"&gt;
+                        &lt;div class="metadata-label"&gt;Resource Count&lt;/div&gt;
+                        &lt;div class="metadata-value"&gt;` + fmt.Sprintf("%d", len(config.ClusterB.Data)) + ` resources&lt;/div&gt;
+                    &lt;/div&gt;
+                    &lt;div class="resource-tags"&gt;
+                        ` + generateResourceTags(config.ClusterB.Resources) + `
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class="tabs"&gt;
+            &lt;button class="tab active" onclick="showTab('overview')"&gt;📊 Overview&lt;/button&gt;
+            &lt;button class="tab" onclick="showTab('breakdown')"&gt;📋 Resource Breakdown&lt;/button&gt;
+            &lt;button class="tab" onclick="showTab('detailed')"&gt;🔎 Detailed Comparison&lt;/button&gt;
+        &lt;/div&gt;
+
+        &lt;div id="overview" class="tab-content active"&gt;
+            &lt;div class="stats-grid" id="stats-grid"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div id="breakdown" class="tab-content"&gt;
+            &lt;div class="comparison-grid" id="breakdown-content"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div id="detailed" class="tab-content"&gt;
+            &lt;div id="detailed-content"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;script&gt;
+        const file1Data = ` + clusterAJSON + `;
+        const file2Data = ` + clusterBJSON + `;
+        
+        window.addEventListener('load', function() {
+            performComparison();
+        });` + generateJavaScriptFunctions() + `
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;`
+
+        return template
+}</span>
+
+// generateJavaScriptFunctions returns the JavaScript functions for the HTML report
+func generateJavaScriptFunctions() string <span class="cov8" title="1">{
+        return `
+        
+        function showTab(tabName) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content =&gt; content.classList.remove('active'));
+            
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab =&gt; tab.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function performComparison() {
+            if (!file1Data || !file2Data) {
+                console.error('Data not available for comparison');
+                return;
+            }
+            
+            const comparison = compareFiles(file1Data, file2Data);
+            displayOverview(comparison);
+            displayBreakdown(comparison);
+            displayDetailed(comparison);
+        }
+        
+        function compareFiles(file1, file2) {
+            const file1Resources = groupByKind(file1);
+            const file2Resources = groupByKind(file2);
+            
+            const allKinds = new Set([...Object.keys(file1Resources), ...Object.keys(file2Resources)]);
+            
+            const comparison = {
+                totalFile1: file1.length,
+                totalFile2: file2.length,
+                kinds: {}
+            };
+            
+            allKinds.forEach(kind =&gt; {
+                const resources1 = file1Resources[kind] || [];
+                const resources2 = file2Resources[kind] || [];
+                
+                comparison.kinds[kind] = {
+                    file1Count: resources1.length,
+                    file2Count: resources2.length,
+                    differences: compareResourceLists(resources1, resources2)
+                };
+            });
+            
+            return comparison;
+        }
+        
+        function groupByKind(resources) {
+            const grouped = {};
+            resources.forEach(resource =&gt; {
+                const kind = resource.kind || 'Unknown';
+                if (!grouped[kind]) {
+                    grouped[kind] = [];
+                }
+                grouped[kind].push(resource);
+            });
+            return grouped;
+        }
+        
+        function compareResourceLists(list1, list2) {
+            const differences = [];
+            const map1 = new Map();
+            const map2 = new Map();
+            
+            list1.forEach(resource =&gt; {
+                const key = getResourceKey(resource);
+                map1.set(key, resource);
+            });
+            
+            list2.forEach(resource =&gt; {
+                const key = getResourceKey(resource);
+                map2.set(key, resource);
+            });
+            
+            map1.forEach((resource, key) =&gt; {
+                if (!map2.has(key)) {
+                    differences.push({
+                        type: 'only_in_file1',
+                        resource: resource,
+                        name: resource.metadata?.name || 'unknown'
+                    });
+                }
+            });
+            
+            map2.forEach((resource, key) =&gt; {
+                if (!map1.has(key)) {
+                    differences.push({
+                        type: 'only_in_file2',
+                        resource: resource,
+                        name: resource.metadata?.name || 'unknown'
+                    });
+                }
+            });
+            
+            map1.forEach((resource1, key) =&gt; {
+                if (map2.has(key)) {
+                    const resource2 = map2.get(key);
+                    const resourceDiffs = findResourceDifferences(resource1, resource2);
+                    if (resourceDiffs.length &gt; 0) {
+                        differences.push({
+                            type: 'different',
+                            resource1: resource1,
+                            resource2: resource2,
+                            name: resource1.metadata?.name || 'unknown',
+                            differences: resourceDiffs
+                        });
+                    }
+                }
+            });
+            
+            return differences;
+        }
+        
+        function getResourceKey(resource) {
+            const name = resource.metadata?.name || 'unknown';
+            const namespace = resource.metadata?.namespace || 'default';
+            const kind = resource.kind || 'unknown';
+            return kind + '/' + namespace + '/' + name;
+        }
+        
+        function findResourceDifferences(obj1, obj2, path = '') {
+            const differences = [];
+            const skipFields = ['resourceVersion', 'uid', 'generation', 'creationTimestamp', 'managedFields'];
+            const allKeys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+            
+            allKeys.forEach(key =&gt; {
+                if (skipFields.includes(key)) return;
+                
+                const newPath = path ? path + '.' + key : key;
+                const val1 = obj1[key];
+                const val2 = obj2[key];
+                
+                if (val1 === undefined &amp;&amp; val2 !== undefined) {
+                    differences.push({ field: newPath, value1: undefined, value2: val2 });
+                } else if (val1 !== undefined &amp;&amp; val2 === undefined) {
+                    differences.push({ field: newPath, value1: val1, value2: undefined });
+                } else if (typeof val1 === 'object' &amp;&amp; typeof val2 === 'object' &amp;&amp; val1 !== null &amp;&amp; val2 !== null) {
+                    differences.push(...findResourceDifferences(val1, val2, newPath));
+                } else if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+                    differences.push({ field: newPath, value1: val1, value2: val2 });
+                }
+            });
+            
+            return differences;
+        }
+        
+        function displayOverview(comparison) {
+            const statsGrid = document.getElementById('stats-grid');
+            const totalDifferences = Object.values(comparison.kinds).reduce((sum, kind) =&gt; sum + kind.differences.length, 0);
+            const totalKinds = Object.keys(comparison.kinds).length;
+            
+            let onlyInFile1 = 0, onlyInFile2 = 0, different = 0;
+            
+            Object.values(comparison.kinds).forEach(kind =&gt; {
+                kind.differences.forEach(diff =&gt; {
+                    if (diff.type === 'only_in_file1') onlyInFile1++;
+                    else if (diff.type === 'only_in_file2') onlyInFile2++;
+                    else if (diff.type === 'different') different++;
+                });
+            });
+            
+            statsGrid.innerHTML = '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + comparison.totalFile1 + '&lt;/span&gt;&lt;div class="stat-label"&gt;Resources in Cluster A&lt;/div&gt;&lt;/div&gt;' +
+                '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + comparison.totalFile2 + '&lt;/span&gt;&lt;div class="stat-label"&gt;Resources in Cluster B&lt;/div&gt;&lt;/div&gt;' +
+                '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + totalKinds + '&lt;/span&gt;&lt;div class="stat-label"&gt;Resource Types&lt;/div&gt;&lt;/div&gt;' +
+                '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + totalDifferences + '&lt;/span&gt;&lt;div class="stat-label"&gt;Total Differences&lt;/div&gt;&lt;/div&gt;' +
+                '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + onlyInFile1 + '&lt;/span&gt;&lt;div class="stat-label"&gt;Only in Cluster A&lt;/div&gt;&lt;/div&gt;' +
+                '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + onlyInFile2 + '&lt;/span&gt;&lt;div class="stat-label"&gt;Only in Cluster B&lt;/div&gt;&lt;/div&gt;' +
+                '&lt;div class="stat-card"&gt;&lt;span class="stat-number"&gt;' + different + '&lt;/span&gt;&lt;div class="stat-label"&gt;Different Resources&lt;/div&gt;&lt;/div&gt;';
+        }
+        
+        function displayBreakdown(comparison) {
+            const breakdownContent = document.getElementById('breakdown-content');
+            
+            const file1Html = Object.entries(comparison.kinds).map(([kind, data]) =&gt; 
+                '&lt;div class="resource-item"&gt;&lt;span class="resource-name"&gt;' + kind + '&lt;/span&gt;&lt;span class="resource-count"&gt;' + data.file1Count + '&lt;/span&gt;&lt;/div&gt;'
+            ).join('');
+            
+            const file2Html = Object.entries(comparison.kinds).map(([kind, data]) =&gt; 
+                '&lt;div class="resource-item"&gt;&lt;span class="resource-name"&gt;' + kind + '&lt;/span&gt;&lt;span class="resource-count"&gt;' + data.file2Count + '&lt;/span&gt;&lt;/div&gt;'
+            ).join('');
+            
+            breakdownContent.innerHTML = '&lt;div class="resource-list"&gt;&lt;h3&gt;🅰️ Cluster A Resources&lt;/h3&gt;' + file1Html + '&lt;/div&gt;' +
+                '&lt;div class="resource-list"&gt;&lt;h3&gt;🅱️ Cluster B Resources&lt;/h3&gt;' + file2Html + '&lt;/div&gt;';
+        }
+        
+        function displayDetailed(comparison) {
+            const detailedContent = document.getElementById('detailed-content');
+            let html = '';
+            
+            Object.entries(comparison.kinds).forEach(([kind, data]) =&gt; {
+                if (data.differences.length === 0) return;
+                
+                html += '&lt;div class="resource-diff"&gt;&lt;div class="resource-header" onclick="toggleResourceDiff(this)"&gt;&lt;h3&gt;' + kind + ' (' + data.differences.length + ' differences)&lt;/h3&gt;&lt;span class="toggle-icon"&gt;▶&lt;/span&gt;&lt;/div&gt;&lt;div class="resource-content"&gt;';
+                
+                data.differences.forEach(diff =&gt; {
+                    let statusBadge = '';
+                    if (diff.type === 'different') statusBadge = '&lt;span class="status-badge status-different"&gt;Different&lt;/span&gt;';
+                    else if (diff.type === 'only_in_file1') statusBadge = '&lt;span class="status-badge status-only-a"&gt;Only in A&lt;/span&gt;';
+                    else if (diff.type === 'only_in_file2') statusBadge = '&lt;span class="status-badge status-only-b"&gt;Only in B&lt;/span&gt;';
+                    
+                    html += '&lt;div class="individual-resource"&gt;&lt;div class="individual-header" onclick="toggleIndividualResource(this)"&gt;&lt;span&gt;' + diff.name + ' ' + statusBadge + '&lt;/span&gt;&lt;span class="toggle-icon"&gt;▶&lt;/span&gt;&lt;/div&gt;&lt;div class="individual-content"&gt;';
+                    
+                    if (diff.type === 'different') {
+                        const resource1 = diff.resource1;
+                        const resource2 = diff.resource2;
+                        html += '&lt;div class="resource-metadata"&gt;&lt;div class="metadata-item"&gt;&lt;div class="metadata-label"&gt;Namespace&lt;/div&gt;&lt;div class="metadata-value"&gt;' + (resource1.metadata.namespace || 'default') + '&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;';
+                        
+                        diff.differences.forEach(fieldDiff =&gt; {
+                            html += '&lt;div class="diff-row"&gt;&lt;div class="diff-field"&gt;' + fieldDiff.field + '&lt;/div&gt;&lt;div class="diff-value different"&gt;&lt;strong&gt;Cluster A:&lt;/strong&gt;&lt;br&gt;' + renderRichJson(fieldDiff.value1) + '&lt;/div&gt;&lt;div class="diff-value different"&gt;&lt;strong&gt;Cluster B:&lt;/strong&gt;&lt;br&gt;' + renderRichJson(fieldDiff.value2) + '&lt;/div&gt;&lt;/div&gt;';
+                        });
+                    } else {
+                        const resource = diff.resource;
+                        const cluster = diff.type === 'only_in_file1' ? 'Cluster A' : 'Cluster B';
+                        const valueClass = diff.type === 'only_in_file1' ? 'missing' : 'added';
+                        html += '&lt;div class="resource-metadata"&gt;&lt;div class="metadata-item"&gt;&lt;div class="metadata-label"&gt;Status&lt;/div&gt;&lt;div class="metadata-value"&gt;Only exists in ' + cluster + '&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;';
+                        html += '&lt;div class="diff-value ' + valueClass + '"&gt;&lt;strong&gt;Resource Definition:&lt;/strong&gt;&lt;br&gt;' + renderRichJson(resource) + '&lt;/div&gt;';
+                    }
+                    
+                    html += '&lt;/div&gt;&lt;/div&gt;';
+                });
+                
+                html += '&lt;/div&gt;&lt;/div&gt;';
+            });
+            
+            if (html === '') {
+                html = '&lt;div class="loading"&gt;No detailed differences found&lt;/div&gt;';
+            }
+            
+            detailedContent.innerHTML = html;
+        }
+        
+        function toggleResourceDiff(header) {
+            header.parentElement.classList.toggle('expanded');
+        }
+        
+        function toggleIndividualResource(header) {
+            header.parentElement.classList.toggle('expanded');
+        }
+        
+        function renderRichJson(value, depth = 0) {
+            if (value === null) return '&lt;span class="json-null"&gt;null&lt;/span&gt;';
+            if (value === undefined) return '&lt;span class="json-null"&gt;undefined&lt;/span&gt;';
+            if (typeof value === 'string') return '&lt;span class="json-string"&gt;"' + escapeHtml(value) + '"&lt;/span&gt;';
+            if (typeof value === 'number') return '&lt;span class="json-number"&gt;' + value + '&lt;/span&gt;';
+            if (typeof value === 'boolean') return '&lt;span class="json-boolean"&gt;' + value + '&lt;/span&gt;';
+            
+            if (Array.isArray(value)) {
+                if (value.length === 0) return '&lt;span class="json-array"&gt;[]&lt;/span&gt;';
+                let html = '&lt;div class="json-array"&gt;[&lt;br&gt;';
+                value.forEach((item, index) =&gt; {
+                    const indent = '&amp;nbsp;'.repeat((depth + 1) * 2);
+                    html += indent + renderRichJson(item, depth + 1);
+                    if (index &lt; value.length - 1) html += ',';
+                    html += '&lt;br&gt;';
+                });
+                html += '&amp;nbsp;'.repeat(depth * 2) + ']&lt;/div&gt;';
+                return html;
+            }
+            
+            if (typeof value === 'object') {
+                const keys = Object.keys(value);
+                if (keys.length === 0) return '&lt;span class="json-object"&gt;{}&lt;/span&gt;';
+                let html = '&lt;div class="json-object"&gt;{&lt;br&gt;';
+                keys.forEach((key, index) =&gt; {
+                    const indent = '&amp;nbsp;'.repeat((depth + 1) * 2);
+                    html += indent + '&lt;span class="json-key"&gt;"' + escapeHtml(key) + '"&lt;/span&gt;: ' + renderRichJson(value[key], depth + 1);
+                    if (index &lt; keys.length - 1) html += ',';
+                    html += '&lt;br&gt;';
+                });
+                html += '&amp;nbsp;'.repeat(depth * 2) + '}&lt;/div&gt;';
+                return html;
+            }
+            
+            return escapeHtml(String(value));
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }`
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "sort"
+        "strings"
+        "time"
+
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+        "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+        "k8s.io/apimachinery/pkg/runtime"
+        "k8s.io/apimachinery/pkg/runtime/schema"
+        "k8s.io/client-go/discovery"
+        "k8s.io/client-go/dynamic"
+        "k8s.io/client-go/kubernetes"
+        "k8s.io/client-go/tools/clientcmd"
+)
+
+// getKubernetesClient creates a Kubernetes client for the given context
+func getKubernetesClient(contextName string) (*kubernetes.Clientset, error) <span class="cov0" title="0">{
+        kubeConfig := clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
+        config, err := clientcmd.LoadFromFile(kubeConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">clientConfig := clientcmd.NewDefaultClientConfig(*config, &amp;clientcmd.ConfigOverrides{
+                CurrentContext: contextName,
+        })
+
+        restConfig, err := clientConfig.ClientConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return kubernetes.NewForConfig(restConfig)</span>
+}
+
+// getDynamicClient creates a dynamic client and discovery client for the given context
+func getDynamicClient(contextName string) (dynamic.Interface, *discovery.DiscoveryClient, error) <span class="cov0" title="0">{
+        kubeConfig := clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
+        config, err := clientcmd.LoadFromFile(kubeConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, err
+        }</span>
+
+        <span class="cov0" title="0">clientConfig := clientcmd.NewDefaultClientConfig(*config, &amp;clientcmd.ConfigOverrides{
+                CurrentContext: contextName,
+        })
+
+        restConfig, err := clientConfig.ClientConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, err
+        }</span>
+
+        <span class="cov0" title="0">dynamicClient, err := dynamic.NewForConfig(restConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, err
+        }</span>
+
+        <span class="cov0" title="0">discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, err
+        }</span>
+
+        <span class="cov0" title="0">return dynamicClient, discoveryClient, nil</span>
+}
+
+// getAvailableContexts returns all available kubectl contexts
+func getAvailableContexts() ([]string, error) <span class="cov0" title="0">{
+        kubeConfig := clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
+        config, err := clientcmd.LoadFromFile(kubeConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var contexts []string
+        for name := range config.Contexts </span><span class="cov0" title="0">{
+                contexts = append(contexts, name)
+        }</span>
+        <span class="cov0" title="0">sort.Strings(contexts)
+        return contexts, nil</span>
+}
+
+// getAvailableResourceTypes returns all available resource types for the given context
+func getAvailableResourceTypes(contextName string) ([]string, error) <span class="cov0" title="0">{
+        client, err := getKubernetesClient(contextName)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">discoveryClient := client.Discovery()
+        apiResourceLists, err := discoveryClient.ServerPreferredResources()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var resources []string
+        resourceSet := make(map[string]bool)
+
+        for _, apiResourceList := range apiResourceLists </span><span class="cov0" title="0">{
+                for _, resource := range apiResourceList.APIResources </span><span class="cov0" title="0">{
+                        if !strings.Contains(resource.Name, "/") &amp;&amp; !resourceSet[resource.Name] </span><span class="cov0" title="0">{
+                                resourceSet[resource.Name] = true
+                                resources = append(resources, resource.Name)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">sort.Strings(resources)
+        return resources, nil</span>
+}
+
+// fetchClusterResourcesWithContext fetches resources from a cluster with the given context
+func fetchClusterResourcesWithContext(contextName string, namespaces []string, resources []string) ([]map[string]interface{}, error) <span class="cov0" title="0">{
+        // Add timeout context for operations
+        ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+        defer cancel()
+
+        dynamicClient, discoveryClient, err := getDynamicClient(contextName)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Get all API resources
+        <span class="cov0" title="0">apiResourceLists, err := discoveryClient.ServerPreferredResources()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var allItems []runtime.Object
+
+        for _, apiResourceList := range apiResourceLists </span><span class="cov0" title="0">{
+                for _, apiResource := range apiResourceList.APIResources </span><span class="cov0" title="0">{
+                        // Check if this resource type is in our selected list
+                        if !contains(resources, apiResource.Name) </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        // Skip subresources
+                        <span class="cov0" title="0">if strings.Contains(apiResource.Name, "/") </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        // Parse group version
+                        <span class="cov0" title="0">gv, err := schema.ParseGroupVersion(apiResourceList.GroupVersion)
+                        if err != nil </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        <span class="cov0" title="0">gvr := schema.GroupVersionResource{
+                                Group:    gv.Group,
+                                Version:  gv.Version,
+                                Resource: apiResource.Name,
+                        }
+
+                        // Fetch resources from selected namespaces
+                        for _, namespace := range namespaces </span><span class="cov0" title="0">{
+                                var resourceInterface dynamic.ResourceInterface
+                                if apiResource.Namespaced </span><span class="cov0" title="0">{
+                                        resourceInterface = dynamicClient.Resource(gvr).Namespace(namespace)
+                                }</span> else<span class="cov0" title="0"> {
+                                        resourceInterface = dynamicClient.Resource(gvr)
+                                }</span>
+
+                                <span class="cov0" title="0">resources, err := resourceInterface.List(ctx, metav1.ListOptions{})
+                                if err != nil </span><span class="cov0" title="0">{
+                                        fmt.Printf("⚠️  Warning: Failed to fetch %s from namespace %s: %v\n", apiResource.Name, namespace, err)
+                                        continue</span>
+                                }
+
+                                <span class="cov0" title="0">for _, item := range resources.Items </span><span class="cov0" title="0">{
+                                        allItems = append(allItems, &amp;item)
+                                }</span>
+                        }
+                }
+        }
+
+        <span class="cov0" title="0">fmt.Printf("✅ Fetched %d resources from %s\n", len(allItems), contextName)
+
+        var result []map[string]interface{}
+        for _, item := range allItems </span><span class="cov0" title="0">{
+                unstructured := item.(*unstructured.Unstructured)
+                result = append(result, unstructured.Object)
+        }</span>
+
+        <span class="cov0" title="0">return result, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package main
+
+import (
+        "fmt"
+        "log"
+        "os"
+
+        "github.com/spf13/cobra"
+)
+
+func main() <span class="cov0" title="0">{
+        var rootCmd = &amp;cobra.Command{
+                Use:   "k8s-compare",
+                Short: "Compare resources between two Kubernetes clusters",
+                Long:  `A CLI tool to interactively select contexts, namespaces, and resources from two Kubernetes clusters and generate JSON output for comparison.`,
+                Run:   runComparison,
+        }
+
+        rootCmd.Flags().StringP("output-dir", "o", ".", "Output directory for generated JSON files")
+        rootCmd.Flags().BoolP("interactive", "i", true, "Run in interactive mode")
+
+        if err := rootCmd.Execute(); err != nil </span><span class="cov0" title="0">{
+                fmt.Println(err)
+                os.Exit(1)
+        }</span>
+}
+
+func runComparison(cmd *cobra.Command, args []string) <span class="cov0" title="0">{
+        fmt.Println("🔍 Kubernetes Cluster Resource Comparison Tool")
+        fmt.Println("==============================================")
+        fmt.Println()
+
+        // Setup and run the comparison
+        config, err := setupComparison()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Setup failed: %v", err)
+        }</span>
+
+        // Fetch resources from both clusters
+        <span class="cov0" title="0">if err := fetchResources(config); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to fetch resources: %v", err)
+        }</span>
+
+        // Generate output files
+        <span class="cov0" title="0">if err := generateOutputFiles(config); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to generate output files: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("\n🎉 Comparison completed successfully!")
+        fmt.Println("📄 Generated files:")
+        fmt.Println("   - cluster-a.json")
+        fmt.Println("   - cluster-b.json")
+        fmt.Println("   - k8s-comparison-report_YYYY-MM-DD_HH-MM-SS.html")
+        fmt.Println("💡 Open the HTML report in your browser to view the comparison")</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package main
+
+import (
+        "encoding/json"
+        "fmt"
+        "html"
+        "os"
+        "strings"
+        "time"
+)
+
+// generateOutputFiles generates JSON and HTML output files
+func generateOutputFiles(config *ComparisonConfig) error <span class="cov8" title="1">{
+        // Write Cluster A data to file
+        if err := writeJSONFile("cluster-a.json", config.ClusterA.Data); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to write cluster-a.json: %w", err)
+        }</span>
+
+        // Write Cluster B data to file
+        <span class="cov8" title="1">if err := writeJSONFile("cluster-b.json", config.ClusterB.Data); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to write cluster-b.json: %w", err)
+        }</span>
+
+        // Generate HTML report
+        <span class="cov8" title="1">if err := generateHTMLReport(config); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to generate HTML report: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// writeJSONFile writes data to a JSON file
+func writeJSONFile(filename string, data []map[string]interface{}) error <span class="cov8" title="1">{
+        jsonData, err := json.MarshalIndent(data, "", "  ")
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">return os.WriteFile(filename, jsonData, 0644)</span>
+}
+
+// generateHTMLReport creates an HTML report with embedded data
+func generateHTMLReport(config *ComparisonConfig) error <span class="cov8" title="1">{
+        // Create timestamp for filename
+        timestamp := time.Now().Format("2006-01-02_15-04-05")
+        filename := fmt.Sprintf("k8s-comparison-report_%s.html", timestamp)
+
+        // Convert data to JSON strings for embedding
+        clusterAJSON, err := json.Marshal(config.ClusterA.Data)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to marshal cluster A data: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">clusterBJSON, err := json.Marshal(config.ClusterB.Data)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to marshal cluster B data: %w", err)
+        }</span>
+
+        // Generate the HTML content
+        <span class="cov8" title="1">htmlContent := generateHTMLTemplate(config, string(clusterAJSON), string(clusterBJSON), timestamp)
+
+        // Write to file
+        err = os.WriteFile(filename, []byte(htmlContent), 0644)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to write HTML report: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">fmt.Printf("📄 Generated HTML report: %s\n", filename)
+        return nil</span>
+}
+
+// generateResourceTags creates HTML tags for resources
+func generateResourceTags(resources []string) string <span class="cov8" title="1">{
+        var tags []string
+        for _, resource := range resources </span><span class="cov8" title="1">{
+                tags = append(tags, fmt.Sprintf(`&lt;span class="resource-tag"&gt;%s&lt;/span&gt;`, html.EscapeString(resource)))
+        }</span>
+        <span class="cov8" title="1">return strings.Join(tags, "\n                        ")</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "sort"
+        "strings"
+
+        "github.com/charmbracelet/huh"
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// setupComparison handles the interactive setup process
+func setupComparison() (*ComparisonConfig, error) <span class="cov0" title="0">{
+        // Get available contexts
+        contexts, err := getAvailableContexts()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get contexts: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if len(contexts) &lt; 2 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("need at least 2 contexts, found %d", len(contexts))
+        }</span>
+
+        <span class="cov0" title="0">config := &amp;ComparisonConfig{}
+
+        // Select contexts
+        fmt.Println("📍 Step 1: Select Kubernetes contexts")
+        config.ClusterA.Context, err = selectFromList("Select Cluster A context:", contexts)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">remainingContexts := removeFromSlice(contexts, config.ClusterA.Context)
+        config.ClusterB.Context, err = selectFromList("Select Cluster B context:", remainingContexts)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Early authentication check for Google Cloud contexts
+        <span class="cov0" title="0">fmt.Println("\n🔐 Checking authentication for selected contexts...")
+
+        if err := ensureGCloudAuth(config.ClusterA.Context); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("authentication failed for Cluster A (%s): %w", config.ClusterA.Context, err)
+        }</span>
+
+        <span class="cov0" title="0">if err := ensureGCloudAuth(config.ClusterB.Context); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("authentication failed for Cluster B (%s): %w", config.ClusterB.Context, err)
+        }</span>
+
+        // Select namespaces for each cluster
+        <span class="cov0" title="0">fmt.Println("\n🏠 Step 2: Select namespaces")
+        config.ClusterA.Namespaces, err = selectNamespaces(config.ClusterA.Context, "Cluster A")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">config.ClusterB.Namespaces, err = selectNamespaces(config.ClusterB.Context, "Cluster B")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Select resource types
+        <span class="cov0" title="0">fmt.Println("\n📦 Step 3: Select resource types")
+        availableResources, err := getAvailableResourceTypes(config.ClusterA.Context)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get available resource types: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">config.ClusterA.Resources, err = selectMultipleFromList("Select resource types to compare:", availableResources)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">config.ClusterB.Resources = config.ClusterA.Resources
+
+        return config, nil</span>
+}
+
+// selectFromList presents a single-select list to the user
+func selectFromList(title string, items []string) (string, error) <span class="cov0" title="0">{
+        var selected string
+
+        options := make([]huh.Option[string], len(items))
+        for i, item := range items </span><span class="cov0" title="0">{
+                options[i] = huh.NewOption(item, item)
+        }</span>
+
+        <span class="cov0" title="0">form := huh.NewForm(
+                huh.NewGroup(
+                        huh.NewSelect[string]().
+                                Title(title).
+                                Options(options...).
+                                Value(&amp;selected),
+                ),
+        )
+
+        err := form.Run()
+        return selected, err</span>
+}
+
+// selectMultipleFromList presents a multi-select list to the user
+func selectMultipleFromList(title string, items []string) ([]string, error) <span class="cov0" title="0">{
+        var selected []string
+
+        // Reorder items to show common resources first
+        reorderedItems := reorderResourcesByPriority(items)
+
+        options := make([]huh.Option[string], len(reorderedItems))
+        for i, item := range reorderedItems </span><span class="cov0" title="0">{
+                options[i] = huh.NewOption(item, item)
+        }</span>
+
+        <span class="cov0" title="0">form := huh.NewForm(
+                huh.NewGroup(
+                        huh.NewMultiSelect[string]().
+                                Title(title).
+                                Options(options...).
+                                Value(&amp;selected),
+                ),
+        )
+
+        err := form.Run()
+        return selected, err</span>
+}
+
+// reorderResourcesByPriority puts common resources first in the list
+func reorderResourcesByPriority(items []string) []string <span class="cov8" title="1">{
+        // Common resource types that should appear first
+        commonResources := []string{
+                "pods", "services", "deployments", "statefulsets", "configmaps",
+                "secrets", "persistentvolumeclaims", "jobs", "cronjobs", "replicasets",
+                "daemonsets", "ingresses", "networkpolicies", "persistentvolumes",
+        }
+
+        // Filter to only include items that exist in the available list
+        var filteredCommon []string
+        for _, common := range commonResources </span><span class="cov8" title="1">{
+                for _, item := range items </span><span class="cov8" title="1">{
+                        if strings.Contains(item, common) </span><span class="cov8" title="1">{
+                                filteredCommon = append(filteredCommon, item)
+                                break</span>
+                        }
+                }
+        }
+
+        // Prepend common resources, then add remaining
+        <span class="cov8" title="1">var reorderedItems []string
+        reorderedItems = append(reorderedItems, filteredCommon...)
+
+        for _, item := range items </span><span class="cov8" title="1">{
+                found := false
+                for _, common := range filteredCommon </span><span class="cov8" title="1">{
+                        if item == common </span><span class="cov8" title="1">{
+                                found = true
+                                break</span>
+                        }
+                }
+                <span class="cov8" title="1">if !found </span><span class="cov8" title="1">{
+                        reorderedItems = append(reorderedItems, item)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return reorderedItems</span>
+}
+
+// selectNamespaces handles namespace selection for a cluster
+func selectNamespaces(contextName, clusterName string) ([]string, error) <span class="cov0" title="0">{
+        // Ensure Google Cloud authentication if needed
+        if err := ensureGCloudAuth(contextName); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("google cloud authentication failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">client, err := getKubernetesClient(contextName)
+        if err != nil </span><span class="cov0" title="0">{
+                if isGoogleCloudContext(contextName) &amp;&amp; (strings.Contains(err.Error(), "gke-gcloud-auth-plugin") ||
+                        strings.Contains(err.Error(), "credential") ||
+                        strings.Contains(err.Error(), "auth")) </span><span class="cov0" title="0">{
+                        fmt.Println("\n🔄 Authentication issue detected, attempting to refresh credentials...")
+                        if authErr := promptGCloudLogin(); authErr != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("failed to authenticate with Google Cloud: %w", authErr)
+                        }</span>
+                        // Retry after authentication
+                        <span class="cov0" title="0">client, err = getKubernetesClient(contextName)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("failed to connect even after authentication: %w", err)
+                        }</span>
+                } else<span class="cov0" title="0"> {
+                        return nil, fmt.Errorf("failed to create Kubernetes client for context %s: %w", contextName, err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">fmt.Printf("📋 Fetching namespaces from %s...\n", clusterName)
+        namespaces, err := client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+        if err != nil </span><span class="cov0" title="0">{
+                if isGoogleCloudContext(contextName) &amp;&amp; (strings.Contains(err.Error(), "credential") ||
+                        strings.Contains(err.Error(), "auth") ||
+                        strings.Contains(err.Error(), "token")) </span><span class="cov0" title="0">{
+                        fmt.Println("\n🔄 Token expired, refreshing authentication...")
+                        if authErr := promptGCloudLogin(); authErr != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("failed to refresh authentication: %w", authErr)
+                        }</span>
+                        // Retry after re-authentication
+                        <span class="cov0" title="0">client, err = getKubernetesClient(contextName)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("failed to reconnect after auth refresh: %w", err)
+                        }</span>
+                        <span class="cov0" title="0">namespaces, err = client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("failed to list namespaces even after re-authentication: %w", err)
+                        }</span>
+                } else<span class="cov0" title="0"> {
+                        return nil, fmt.Errorf("failed to list namespaces: %w", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">var nsNames []string
+        for _, ns := range namespaces.Items </span><span class="cov0" title="0">{
+                nsNames = append(nsNames, ns.Name)
+        }</span>
+        <span class="cov0" title="0">sort.Strings(nsNames)
+
+        selectedNs, err := selectMultipleFromList(fmt.Sprintf("Select namespaces for %s:", clusterName), nsNames)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">if len(selectedNs) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("no namespaces selected")
+        }</span>
+
+        <span class="cov0" title="0">return selectedNs, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package main
+
+// contains checks if a slice contains a specific item
+func contains(slice []string, item string) bool <span class="cov8" title="1">{
+        for _, s := range slice </span><span class="cov8" title="1">{
+                if s == item </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+// removeFromSlice removes an item from a slice and returns the new slice
+func removeFromSlice(slice []string, item string) []string <span class="cov8" title="1">{
+        var result []string
+        for _, s := range slice </span><span class="cov8" title="1">{
+                if s != item </span><span class="cov8" title="1">{
+                        result = append(result, s)
+                }</span>
+        }
+        <span class="cov8" title="1">return result</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
