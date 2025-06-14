@@ -6,18 +6,22 @@ import (
 	"html"
 	"os"
 	"strings"
-	"time"
 )
 
 // generateOutputFiles generates JSON and HTML output files
 func generateOutputFiles(config *ComparisonConfig) error {
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(config.OutputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
 	// Write Cluster A data to file
-	if err := writeJSONFile("cluster-a.json", config.ClusterA.Data); err != nil {
+	if err := writeJSONFile(fmt.Sprintf("%s/cluster-a-%s.json", config.OutputDir, config.ReportTimestamp), config.ClusterA.Data); err != nil {
 		return fmt.Errorf("failed to write cluster-a.json: %w", err)
 	}
 
 	// Write Cluster B data to file
-	if err := writeJSONFile("cluster-b.json", config.ClusterB.Data); err != nil {
+	if err := writeJSONFile(fmt.Sprintf("%s/cluster-b-%s.json", config.OutputDir, config.ReportTimestamp), config.ClusterB.Data); err != nil {
 		return fmt.Errorf("failed to write cluster-b.json: %w", err)
 	}
 
@@ -42,8 +46,7 @@ func writeJSONFile(filename string, data []map[string]interface{}) error {
 // generateHTMLReport creates an HTML report with embedded data
 func generateHTMLReport(config *ComparisonConfig) error {
 	// Create timestamp for filename
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	filename := fmt.Sprintf("k8s-comparison-report_%s.html", timestamp)
+	filename := fmt.Sprintf("%s/k8s-comparison-report_%s.html", config.OutputDir, config.ReportTimestamp)
 
 	// Convert data to JSON strings for embedding
 	clusterAJSON, err := json.Marshal(config.ClusterA.Data)
@@ -57,7 +60,7 @@ func generateHTMLReport(config *ComparisonConfig) error {
 	}
 
 	// Generate the HTML content
-	htmlContent := generateHTMLTemplate(config, string(clusterAJSON), string(clusterBJSON), timestamp)
+	htmlContent := generateHTMLTemplate(config, string(clusterAJSON), string(clusterBJSON), config.ReportTimestamp)
 
 	// Write to file
 	err = os.WriteFile(filename, []byte(htmlContent), 0644)

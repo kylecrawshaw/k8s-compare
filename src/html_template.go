@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -130,6 +131,13 @@ func generateHTMLTemplate(config *ComparisonConfig, clusterAJSON, clusterBJSON, 
             </div>
         </div>
 
+        <div style="margin-bottom: 24px; text-align: center;">
+            <label style="font-weight: 500; color: #2c3e50; cursor: pointer;">
+                <input type="checkbox" id="namespace-toggle" checked style="margin-right: 8px; vertical-align: middle;" />
+                Use <span style="font-family: monospace;">namespace</span> for resource comparison
+            </label>
+        </div>
+
         <div class="tabs">
             <button class="tab active" onclick="showTab('overview')">📊 Overview</button>
             <button class="tab" onclick="showTab('breakdown')">📋 Resource Breakdown</button>
@@ -152,10 +160,303 @@ func generateHTMLTemplate(config *ComparisonConfig, clusterAJSON, clusterBJSON, 
     <script>
         const file1Data = ` + clusterAJSON + `;
         const file2Data = ` + clusterBJSON + `;
-        
-        window.addEventListener('load', function() {
+        let useNamespace = ` + strconv.FormatBool(config.CompareNamespaces) + `;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('namespace-toggle').addEventListener('change', function(e) {
+                useNamespace = e.target.checked;
+                performComparison();
+            });
             performComparison();
-        });` + generateJavaScriptFunctions() + `
+        });
+        
+        function showTab(tabName) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function performComparison() {
+            if (!file1Data || !file2Data) {
+                console.error('Data not available for comparison');
+                return;
+            }
+            
+            const comparison = compareFiles(file1Data, file2Data);
+            displayOverview(comparison);
+            displayBreakdown(comparison);
+            displayDetailed(comparison);
+        }
+        
+        function compareFiles(file1, file2) {
+            const file1Resources = groupByKind(file1);
+            const file2Resources = groupByKind(file2);
+            
+            const allKinds = new Set([...Object.keys(file1Resources), ...Object.keys(file2Resources)]);
+            
+            const comparison = {
+                totalFile1: file1.length,
+                totalFile2: file2.length,
+                kinds: {}
+            };
+            
+            allKinds.forEach(kind => {
+                const resources1 = file1Resources[kind] || [];
+                const resources2 = file2Resources[kind] || [];
+                
+                comparison.kinds[kind] = {
+                    file1Count: resources1.length,
+                    file2Count: resources2.length,
+                    differences: compareResourceLists(resources1, resources2)
+                };
+            });
+            
+            return comparison;
+        }
+        
+        function groupByKind(resources) {
+            const grouped = {};
+            resources.forEach(resource => {
+                const kind = resource.kind || 'Unknown';
+                if (!grouped[kind]) {
+                    grouped[kind] = [];
+                }
+                grouped[kind].push(resource);
+            });
+            return grouped;
+        }
+        
+        function compareResourceLists(list1, list2) {
+            const differences = [];
+            const map1 = new Map();
+            const map2 = new Map();
+            
+            list1.forEach(resource => {
+                const key = getResourceKey(resource);
+                map1.set(key, resource);
+            });
+            
+            list2.forEach(resource => {
+                const key = getResourceKey(resource);
+                map2.set(key, resource);
+            });
+            
+            map1.forEach((resource, key) => {
+                if (!map2.has(key)) {
+                    differences.push({
+                        type: 'only_in_file1',
+                        resource: resource,
+                        name: resource.metadata?.name || 'unknown'
+                    });
+                }
+            });
+            
+            map2.forEach((resource, key) => {
+                if (!map1.has(key)) {
+                    differences.push({
+                        type: 'only_in_file2',
+                        resource: resource,
+                        name: resource.metadata?.name || 'unknown'
+                    });
+                }
+            });
+            
+            map1.forEach((resource1, key) => {
+                if (map2.has(key)) {
+                    const resource2 = map2.get(key);
+                    const resourceDiffs = findResourceDifferences(resource1, resource2);
+                    if (resourceDiffs.length > 0) {
+                        differences.push({
+                            type: 'different',
+                            resource1: resource1,
+                            resource2: resource2,
+                            name: resource1.metadata?.name || 'unknown',
+                            differences: resourceDiffs
+                        });
+                    }
+                }
+            });
+            
+            return differences;
+        }
+        
+        function getResourceKey(resource) {
+            const name = resource.metadata?.name || 'unknown';
+            const namespace = resource.metadata?.namespace || 'default';
+            const kind = resource.kind || 'unknown';
+            if (useNamespace) {
+                return kind + '/' + namespace + '/' + name;
+            } else {
+                return kind + '/' + name;
+            }
+        }
+        
+        function findResourceDifferences(obj1, obj2, path = '') {
+            const differences = [];
+            const skipFields = ['resourceVersion', 'uid', 'generation', 'creationTimestamp', 'managedFields'];
+            const allKeys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+            
+            allKeys.forEach(key => {
+                if (skipFields.includes(key)) return;
+                
+                const newPath = path ? path + '.' + key : key;
+                const val1 = obj1[key];
+                const val2 = obj2[key];
+                
+                if (val1 === undefined && val2 !== undefined) {
+                    differences.push({ field: newPath, value1: undefined, value2: val2 });
+                } else if (val1 !== undefined && val2 === undefined) {
+                    differences.push({ field: newPath, value1: val1, value2: undefined });
+                } else if (typeof val1 === 'object' && typeof val2 === 'object' && val1 !== null && val2 !== null) {
+                    differences.push(...findResourceDifferences(val1, val2, newPath));
+                } else if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+                    differences.push({ field: newPath, value1: val1, value2: val2 });
+                }
+            });
+            
+            return differences;
+        }
+        
+        function displayOverview(comparison) {
+            const statsGrid = document.getElementById('stats-grid');
+            const totalDifferences = Object.values(comparison.kinds).reduce((sum, kind) => sum + kind.differences.length, 0);
+            const totalKinds = Object.keys(comparison.kinds).length;
+            
+            let onlyInFile1 = 0, onlyInFile2 = 0, different = 0;
+            
+            Object.values(comparison.kinds).forEach(kind => {
+                kind.differences.forEach(diff => {
+                    if (diff.type === 'only_in_file1') onlyInFile1++;
+                    else if (diff.type === 'only_in_file2') onlyInFile2++;
+                    else if (diff.type === 'different') different++;
+                });
+            });
+            
+            statsGrid.innerHTML = '<div class="stat-card"><span class="stat-number">' + comparison.totalFile1 + '</span><div class="stat-label">Resources in Cluster A</div></div>' +
+                '<div class="stat-card"><span class="stat-number">' + comparison.totalFile2 + '</span><div class="stat-label">Resources in Cluster B</div></div>' +
+                '<div class="stat-card"><span class="stat-number">' + totalKinds + '</span><div class="stat-label">Resource Types</div></div>' +
+                '<div class="stat-card"><span class="stat-number">' + totalDifferences + '</span><div class="stat-label">Total Differences</div></div>' +
+                '<div class="stat-card"><span class="stat-number">' + onlyInFile1 + '</span><div class="stat-label">Only in Cluster A</div></div>' +
+                '<div class="stat-card"><span class="stat-number">' + onlyInFile2 + '</span><div class="stat-label">Only in Cluster B</div></div>' +
+                '<div class="stat-card"><span class="stat-number">' + different + '</span><div class="stat-label">Different Resources</div></div>';
+        }
+        
+        function displayBreakdown(comparison) {
+            const breakdownContent = document.getElementById('breakdown-content');
+            
+            const file1Html = Object.entries(comparison.kinds).map(([kind, data]) => 
+                '<div class="resource-item"><span class="resource-name">' + kind + '</span><span class="resource-count">' + data.file1Count + '</span></div>'
+            ).join('');
+            
+            const file2Html = Object.entries(comparison.kinds).map(([kind, data]) => 
+                '<div class="resource-item"><span class="resource-name">' + kind + '</span><span class="resource-count">' + data.file2Count + '</span></div>'
+            ).join('');
+            
+            breakdownContent.innerHTML = '<div class="resource-list"><h3>🅰️ Cluster A Resources</h3>' + file1Html + '</div>' +
+                '<div class="resource-list"><h3>🅱️ Cluster B Resources</h3>' + file2Html + '</div>';
+        }
+        
+        function displayDetailed(comparison) {
+            const detailedContent = document.getElementById('detailed-content');
+            let html = '';
+            
+            Object.entries(comparison.kinds).forEach(([kind, data]) => {
+                if (data.differences.length === 0) return;
+                
+                html += '<div class="resource-diff"><div class="resource-header" onclick="toggleResourceDiff(this)"><h3>' + kind + ' (' + data.differences.length + ' differences)</h3><span class="toggle-icon">▶</span></div><div class="resource-content">';
+                
+                data.differences.forEach(diff => {
+                    let statusBadge = '';
+                    if (diff.type === 'different') statusBadge = '<span class="status-badge status-different">Different</span>';
+                    else if (diff.type === 'only_in_file1') statusBadge = '<span class="status-badge status-only-a">Only in A</span>';
+                    else if (diff.type === 'only_in_file2') statusBadge = '<span class="status-badge status-only-b">Only in B</span>';
+                    
+                    html += '<div class="individual-resource"><div class="individual-header" onclick="toggleIndividualResource(this)"><span>' + diff.name + ' ' + statusBadge + '</span><span class="toggle-icon">▶</span></div><div class="individual-content">';
+                    
+                    if (diff.type === 'different') {
+                        const resource1 = diff.resource1;
+                        const resource2 = diff.resource2;
+                        html += '<div class="resource-metadata"><div class="metadata-item"><div class="metadata-label">Namespace</div><div class="metadata-value">' + (resource1.metadata.namespace || 'default') + '</div></div></div>';
+                        
+                        diff.differences.forEach(fieldDiff => {
+                            html += '<div class="diff-row"><div class="diff-field">' + fieldDiff.field + '</div><div class="diff-value different"><strong>Cluster A:</strong><br>' + renderRichJson(fieldDiff.value1) + '</div><div class="diff-value different"><strong>Cluster B:</strong><br>' + renderRichJson(fieldDiff.value2) + '</div></div>';
+                        });
+                    } else {
+                        const resource = diff.resource;
+                        const cluster = diff.type === 'only_in_file1' ? 'Cluster A' : 'Cluster B';
+                        const valueClass = diff.type === 'only_in_file1' ? 'missing' : 'added';
+                        html += '<div class="resource-metadata"><div class="metadata-item"><div class="metadata-label">Status</div><div class="metadata-value">Only exists in ' + cluster + '</div></div></div>';
+                        html += '<div class="diff-value ' + valueClass + '"><strong>Resource Definition:</strong><br>' + renderRichJson(resource) + '</div>';
+                    }
+                    
+                    html += '</div></div>';
+                });
+                
+                html += '</div></div>';
+            });
+            
+            if (html === '') {
+                html = '<div class="loading">No detailed differences found</div>';
+            }
+            
+            detailedContent.innerHTML = html;
+        }
+        
+        function toggleResourceDiff(header) {
+            header.parentElement.classList.toggle('expanded');
+        }
+        
+        function toggleIndividualResource(header) {
+            header.parentElement.classList.toggle('expanded');
+        }
+        
+        function renderRichJson(value, depth = 0) {
+            if (value === null) return '<span class="json-null">null</span>';
+            if (value === undefined) return '<span class="json-null">undefined</span>';
+            if (typeof value === 'string') return '<span class="json-string">"' + escapeHtml(value) + '"</span>';
+            if (typeof value === 'number') return '<span class="json-number">' + value + '</span>';
+            if (typeof value === 'boolean') return '<span class="json-boolean">' + value + '</span>';
+            
+            if (Array.isArray(value)) {
+                if (value.length === 0) return '<span class="json-array">[]</span>';
+                let html = '<div class="json-array">[<br>';
+                value.forEach((item, index) => {
+                    const indent = '&nbsp;'.repeat((depth + 1) * 2);
+                    html += indent + renderRichJson(item, depth + 1);
+                    if (index < value.length - 1) html += ',';
+                    html += '<br>';
+                });
+                html += '&nbsp;'.repeat(depth * 2) + ']</div>';
+                return html;
+            }
+            
+            if (typeof value === 'object') {
+                const keys = Object.keys(value);
+                if (keys.length === 0) return '<span class="json-object">{}</span>';
+                let html = '<div class="json-object">{<br>';
+                keys.forEach((key, index) => {
+                    const indent = '&nbsp;'.repeat((depth + 1) * 2);
+                    html += indent + '<span class="json-key">"' + escapeHtml(key) + '"</span>: ' + renderRichJson(value[key], depth + 1);
+                    if (index < keys.length - 1) html += ',';
+                    html += '<br>';
+                });
+                html += '&nbsp;'.repeat(depth * 2) + '}</div>';
+                return html;
+            }
+            
+            return escapeHtml(String(value));
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
     </script>
 </body>
 </html>`
@@ -286,7 +587,11 @@ func generateJavaScriptFunctions() string {
             const name = resource.metadata?.name || 'unknown';
             const namespace = resource.metadata?.namespace || 'default';
             const kind = resource.kind || 'unknown';
-            return kind + '/' + namespace + '/' + name;
+            if (useNamespace) {
+                return kind + '/' + namespace + '/' + name;
+            } else {
+                return kind + '/' + name;
+            }
         }
         
         function findResourceDifferences(obj1, obj2, path = '') {

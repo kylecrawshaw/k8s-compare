@@ -31,8 +31,8 @@ test-ginkgo:
 test-coverage:
 	@echo "🧪 Running tests with coverage..."
 	cd src && go test -v -coverprofile=coverage.out ./...
-	cd src && go tool cover -html=coverage.out -o coverage.html
-	@echo "📊 Coverage report generated: src/coverage.html"
+	cd src && go tool cover -html=../coverage.out -o ../coverage.html
+	@echo "📊 Coverage report generated: coverage.html"
 
 # Run tests in watch mode
 test-watch:
@@ -46,7 +46,7 @@ deps:
 	go mod download
 
 run: build
-	./k8s-compare
+	./k8s-compare $@
 
 # Show help
 help:

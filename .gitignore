@@ -1,0 +1,7 @@
+*.bkp
+reports/**
+.DS_Store
+k8s-compare
+
+coverage.out
+coverage.html

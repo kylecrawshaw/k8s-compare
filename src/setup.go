@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // setupComparison handles the interactive setup process
-func setupComparison() (*ComparisonConfig, error) {
+func setupComparison(outputDir string, compareNamespaces bool) (*ComparisonConfig, error) {
 	// Get available contexts
 	contexts, err := getAvailableContexts()
 	if err != nil {
@@ -22,7 +23,11 @@ func setupComparison() (*ComparisonConfig, error) {
 		return nil, fmt.Errorf("need at least 2 contexts, found %d", len(contexts))
 	}
 
-	config := &ComparisonConfig{}
+	config := &ComparisonConfig{
+		OutputDir:         outputDir,
+		ReportTimestamp:   time.Now().Format("2006-01-02_15:04:05"),
+		CompareNamespaces: compareNamespaces,
+	}
 
 	// Select contexts
 	fmt.Println("📍 Step 1: Select Kubernetes contexts")

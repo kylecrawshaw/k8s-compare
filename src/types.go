@@ -10,6 +10,9 @@ type ClusterConfig struct {
 
 // ComparisonConfig holds configuration for comparing two clusters
 type ComparisonConfig struct {
-	ClusterA ClusterConfig
-	ClusterB ClusterConfig
+	ClusterA          ClusterConfig
+	ClusterB          ClusterConfig
+	OutputDir         string
+	ReportTimestamp   string
+	CompareNamespaces bool
 }
